@@ -1,0 +1,52 @@
+PROGRAM ZSDR_MDP_EX1.
+
+DATA  A TYPE EKKO-EBELN.
+
+TYPES : BEGIN OF TY_EKPO,
+        EBELN TYPE EKPO-EBELN,
+        EBELP TYPE EKPO-EBELP,
+        MENGE TYPE EKPO-MENGE,
+        MEINS TYPE EKPO-MEINS,
+        NETPR TYPE EKPO-NETPR ,
+       END  OF TY_EKPO.
+
+ DATA : IT_EKPO TYPE STANDARD TABLE OF TY_EKPO,
+        WA_EKPO TYPE TY_EKPO.
+
+
+       CONTROLS TBC TYPE TABLEVIEW USING SCREEN 2000.
+
+*&---------------------------------------------------------------------*
+*&      MODULE  USER_COMMAND_1000  INPUT
+*&---------------------------------------------------------------------*
+*       TEXT
+*----------------------------------------------------------------------*
+MODULE USER_COMMAND_1000 INPUT.
+
+  IF SY-UCOMM = 'DIS'.
+
+    SELECT EBELN EBELP MENGE MEINS NETPR
+      FROM EKPO INTO TABLE IT_EKPO
+      WHERE EBELN = A.
+
+      CALL SCREEN 2000.
+
+      ELSEIF SY-UCOMM = 'BACK'.
+        LEAVE PROGRAM.
+ENDIF.
+
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      MODULE  USER_COMMAND_2000  INPUT
+*&---------------------------------------------------------------------*
+*       TEXT
+*----------------------------------------------------------------------*
+MODULE USER_COMMAND_2000 INPUT.
+
+  IF SY-UCOMM = 'BACK'.
+    LEAVE TO SCREEN 0.
+    ENDIF.
+
+
+
+ENDMODULE.

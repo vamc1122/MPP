@@ -1,0 +1,1590 @@
+PROGRAM ZIN20_GATEPASS_OUTWARD.
+
+
+INCLUDE zin20_gatepass_outward_statTOP.
+INCLUDE zin20_gatepass_outward_stato01.
+INCLUDE zin20_gatepass_outward_useri01.
+INCLUDE zin20_gatepass_outward_F01.
+
+MODULE TC_TAB_USER_COMMAND INPUT.
+  OK_CODE = SY-UCOMM.
+  PERFORM USER_OK_TC USING    'TC_TAB'
+                              'G_TC_TAB_ITAB'
+                              'FLAG'
+                     CHANGING OK_CODE.
+  SY-UCOMM = OK_CODE.
+ENDMODULE.
+
+
+1st Include :
+
+TABLES: zin20_gatep_tran.
+*&SPWIZARD: DECLARATION OF TABLECONTROL 'TC_DISPLAY' ITSELF
+CONTROLS: tc_display TYPE TABLEVIEW USING SCREEN 9001.
+
+*&SPWIZARD: LINES OF TABLECONTROL 'TC_DISPLAY'
+DATA:     g_tc_display_lines  LIKE sy-loopc.
+
+DATA:     ok_code LIKE sy-ucomm.
+TYPES : BEGIN OF ty_9002,
+          transporter_code TYPE lifnr,
+          name1            TYPE name1,
+        END OF ty_9002.
+TYPES : BEGIN OF ty_load_loc,
+          werks TYPE werks_d,
+          arbpl TYPE arbpl,
+        END OF ty_load_loc.
+
+
+TYPES: BEGIN OF ty_gate,
+         challan_no     TYPE zin20_gatep_tran-challan_no,
+         srno           TYPE char1,
+         gate_pass_no   TYPE zin20_gatep_tran-gate_pass_no,
+         gyear          type zin20_gatep_tran-gyear,
+         plant          TYPE zin20_gatep_tran-plant,
+         posting_date   TYPE zin20_gatep_tran-posting_date,
+         posting_time   TYPE zin20_gatep_tran-posting_time,
+         mode_of_tran   TYPE zin20_gatep_tran-mode_of_tran,
+         lr_rr_no       TYPE zin20_gatep_tran-lr_rr_no,
+         transport_code TYPE zin20_gatep_tran-transport_code,
+         transport_name TYPE zin20_gatep_tran-transport_name,
+         transporter_no TYPE zin20_gatep_tran-transporter_no,
+         driver_name    TYPE zin20_gatep_tran-driver_name,
+         driver_no      TYPE zin20_gatep_tran-driver_no,
+         vehicle_no     TYPE zin20_gatep_tran-vehicle_no,
+         inward_date    TYPE zin20_gatep_tran-inward_date,
+         inward_time    TYPE zin20_gatep_tran-inward_time,
+         reporting_loc  TYPE zin20_gatep_tran-reporting_loc,
+         loading_loc    TYPE zin20_gatep_tran-loading_loc,
+         description    TYPE zin20_gatep_tran-description,
+         vendor_code    TYPE zin20_gatep_tran-vendor_code,
+         vendor_name    TYPE zin20_gatep_tran-vendor_name,
+         outward_date   TYPE zin20_gatep_tran-outward_date,
+         outward_time   TYPE zin20_gatep_tran-outward_time,
+         no_series      TYPE zin20_gatep_tran-no_series,
+*         challan_no     TYPE zin20_gatep_tran-challan_no,
+         challan_date   TYPE zin20_gatep_tran-challan_date,
+         invoice_no     TYPE zin20_gatep_tran-invoice_no,
+         invoice_date   TYPE zin20_gatep_tran-invoice_date,
+         source_type    TYPE zin20_gatep_tran-source_type,
+         source_no      TYPE zin20_gatep_tran-source_no,
+         source_name    TYPE zin20_gatep_tran-source_name,
+         item_no        TYPE zin20_gatep_tran-item_no,
+         item_desc      TYPE zin20_gatep_tran-item_desc,
+         uom            TYPE zin20_gatep_tran-uom,
+         qty            TYPE zin20_gatep_tran-qty,
+         challan_qty    TYPE zin20_gatep_tran-challan_qty,
+         cancelled      TYPE zin20_gatep_tran-cancelled,
+         entry_date     TYPE zin20_gatep_tran-entry_date,
+         entry_time     TYPE zin20_gatep_tran-entry_time,
+         entry_by       TYPE zin20_gatep_tran-entry_by,
+       END OF ty_gate.
+
+
+DATA : okcode    TYPE sy-ucomm,
+       gs_okcode TYPE sy-ucomm.
+DATA : lv_fname TYPE rs38l_fnam.
+DATA : i_otfdata       TYPE tsfotf,
+       i_otfdata1      TYPE tsfotf,
+       wa_ssfcompop    TYPE ssfcompop,
+       wa_control      TYPE ssfctrlop,
+       wa_output       TYPE ssfcompop,
+       gv_devtype      TYPE rspoptype,
+       ls_output       TYPE ssfcrescl,
+       lv_bin_filesize TYPE i,
+       l_xstring       TYPE xstring,
+       i_lines         TYPE TABLE OF tline.
+DATA: lv_form TYPE tdsfname.
+DATA: r_in     TYPE c,
+      r_out    TYPE c,
+      r_rgp    TYPE c,
+      r_cancel TYPE c,
+      r_print  TYPE c.
+DATA: wa_gatep_tran  TYPE zin20_gatep_tran,
+      it_gatep_tran  TYPE TABLE OF ty_gate,
+      it_gatep_tran1  TYPE TABLE OF zin20_gatep_tran,
+      wa_gatep_tran1 TYPE ty_gate.
+DATA: lv_number TYPE numc7.
+*DATA: TC_DISPLAY-lines TYPE numc10.
+DATA: lv_year TYPE nryear.
+DATA: lv_flag TYPE char1.
+DATA: lv_skip TYPE char1.
+DATA: lv_item TYPE char6.
+DATA: lv_number1 TYPE char8.
+DATA: lv_gatepass TYPE numc10.
+DATA: lv_msg TYPE char70.
+DATA: lv_ans TYPE char1.
+DATA: wa_gate_no TYPE zin20_gatep_tran-gate_pass_no.
+DATA :field_tab  TYPE TABLE OF dfies,
+      return_tab TYPE TABLE OF ddshretval.
+DATA : lt_9002 TYPE TABLE OF ty_9002.
+DATA : lt_90021 TYPE TABLE OF ty_9002.
+DATA: it_load_loc TYPE TABLE OF ty_load_loc.
+
+*DATA lv_scrnum(4)  TYPE c VALUE '9011'.
+
+
+
+2nd Include:
+
+  *----------------------------------------------------------------------*
+***INCLUDE ZIN20_GATEPASS_OUTWARD_STATO01.
+*----------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Module  STATUS_9000  OUTPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE status_9000 OUTPUT.
+  SET PF-STATUS '9000_STATUS'.
+  SET TITLEBAR '9000_TITLE'.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  STATUS_9001  OUTPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE status_9001 OUTPUT.
+  SET PF-STATUS '9001_STATUS'.
+  SET TITLEBAR '9001_TITLE'.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  STATUS_9002  OUTPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE status_9002 OUTPUT.
+  SET PF-STATUS '9002_STATUS'.
+  SET TITLEBAR '9002_TITLE'.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  STATUS_9003  OUTPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE status_9003 OUTPUT.
+  SET PF-STATUS '9003_STATUS'.
+  SET TITLEBAR '9003_TITLE'.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  STATUS_9004  OUTPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE status_9004 OUTPUT.
+  SET PF-STATUS '9004_STATUS'.
+  SET TITLEBAR '9004_TITLE'.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  STATUS_9005  OUTPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE status_9005 OUTPUT.
+  SET PF-STATUS '9005_STATUS'.
+  SET TITLEBAR '9005_TITLE'.
+ENDMODULE.
+
+*&SPWIZARD: OUTPUT MODULE FOR TC 'TC_DISPLAY'. DO NOT CHANGE THIS LINE!
+*&SPWIZARD: UPDATE LINES FOR EQUIVALENT SCROLLBAR
+MODULE TC_DISPLAY_CHANGE_TC_ATTR OUTPUT.
+  DESCRIBE TABLE IT_GATEP_TRAN LINES TC_DISPLAY-lines.
+
+  if IT_GATEP_TRAN is INITIAL.
+  DELETE IT_GATEP_TRAN WHERE challan_no is INITIAL.
+  CLEAR wa_gatep_tran1.
+  do 5 TIMES.
+  APPEND wa_gatep_tran1 to IT_GATEP_TRAN.
+  ENDDO.
+  ENDIF.
+
+ENDMODULE.
+
+*&SPWIZARD: OUTPUT MODULE FOR TC 'TC_DISPLAY'. DO NOT CHANGE THIS LINE!
+*&SPWIZARD: GET LINES OF TABLECONTROL
+MODULE TC_DISPLAY_GET_LINES OUTPUT.
+  G_TC_DISPLAY_LINES = SY-LOOPC.
+ENDMODULE.
+
+
+3rd Include:
+
+*----------------------------------------------------------------------*
+***INCLUDE ZIN20_GATEPASS_OUTWARD_USERI01.
+*----------------------------------------------------------------------*
+
+
+*&---------------------------------------------------------------------*
+*&      Module  AT_EXIT_9000  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE at_exit_9000 INPUT.
+  gs_okcode = sy-ucomm.
+  lv_year = sy-datum+0(4).
+  CLEAR okcode.
+  CASE gs_okcode.
+    WHEN 'BACK' OR 'CANCEL'.
+      LEAVE PROGRAM.
+    WHEN 'EXIT'.
+      LEAVE PROGRAM.
+    WHEN 'GO'.
+      REFRESH : it_gatep_tran.
+      CLEAR: wa_gatep_tran.
+      IF r_out = 'X'.
+        wa_gatep_tran-posting_date = sy-datum.
+        wa_gatep_tran-posting_time = sy-uzeit.
+        wa_gatep_tran-outward_date = sy-datum.
+        wa_gatep_tran-outward_time = sy-uzeit.
+
+        CALL SCREEN '9001'.
+      ELSEIF r_in = 'X'.
+        wa_gatep_tran-posting_date = sy-datum.
+        wa_gatep_tran-posting_time = sy-uzeit.
+        wa_gatep_tran-inward_date = sy-datum.
+        wa_gatep_tran-inward_time = sy-uzeit.
+
+        CALL SCREEN '9002'.
+      ELSEIF r_rgp = 'X'.
+        wa_gatep_tran-posting_date = sy-datum.
+        wa_gatep_tran-posting_time = sy-uzeit.
+        wa_gatep_tran-inward_date = sy-datum.
+        wa_gatep_tran-inward_time = sy-uzeit.
+
+        CALL SCREEN '9003'.
+      ELSEIF r_cancel = 'X'.
+        CALL SCREEN '9004'.
+      ELSEIF r_print = 'X'.
+        CALL SCREEN '9005'.
+      ENDIF.
+  ENDCASE.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_9000  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE user_command_9000 INPUT.
+  CALL SCREEN '9000'.
+ENDMODULE.
+
+
+*&---------------------------------------------------------------------*
+*&      Module  AT_EXIT_9001  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE at_exit_9001 INPUT.
+  IF wa_gatep_tran-transport_code IS NOT INITIAL.
+    SELECT SINGLE name1 FROM kna1 INTO wa_gatep_tran-transport_name WHERE kunnr = wa_gatep_tran-transport_code.
+    IF wa_gatep_tran-transport_name IS INITIAL.
+      SELECT SINGLE name1 FROM lfa1 INTO wa_gatep_tran-transport_name WHERE lifnr = wa_gatep_tran-transport_code.
+    ENDIF.
+  ENDIF.
+  IF  wa_gatep_tran-vendor_code IS NOT INITIAL.
+    SELECT SINGLE name1 FROM lfa1 INTO wa_gatep_tran-vendor_name WHERE lifnr = wa_gatep_tran-vendor_code.
+  ENDIF.
+ENDMODULE.
+
+
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_9001  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE user_command_9001 INPUT.
+  CLEAR: gs_okcode.
+  gs_okcode = sy-ucomm.
+  CLEAR okcode.
+  CASE gs_okcode.
+    WHEN 'BACK' OR 'CANCEL'.
+      LEAVE TO SCREEN 0.
+    WHEN 'EXIT'.
+      LEAVE PROGRAM.
+    WHEN 'SAVE'.
+      PERFORM update_table.
+  ENDCASE.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_9002  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE user_command_9002 INPUT.
+  CLEAR: gs_okcode.
+  gs_okcode = sy-ucomm.
+  CLEAR okcode.
+  CASE gs_okcode.
+    WHEN 'BACK' OR 'CANCEL'.
+      LEAVE TO SCREEN 0.
+    WHEN 'EXIT'.
+      LEAVE PROGRAM.
+    WHEN 'SAVE'.
+      PERFORM update_table_inward.
+  ENDCASE.
+ENDMODULE.
+
+*&---------------------------------------------------------------------*
+*&      Module  AT_EXIT_9002  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE at_exit_9002 INPUT.
+  IF wa_gatep_tran-transport_code IS NOT INITIAL.
+    SELECT SINGLE name1 FROM kna1 INTO wa_gatep_tran-transport_name WHERE kunnr = wa_gatep_tran-transport_code.
+    IF wa_gatep_tran-transport_name IS INITIAL.
+      SELECT SINGLE name1 FROM lfa1 INTO wa_gatep_tran-transport_name WHERE lifnr = wa_gatep_tran-transport_code.
+    ENDIF.
+  ENDIF.
+  IF  wa_gatep_tran-vendor_code IS NOT INITIAL.
+    SELECT SINGLE name1 FROM lfa1 INTO wa_gatep_tran-vendor_name WHERE lifnr = wa_gatep_tran-vendor_code.
+  ENDIF.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  VALIDATE_PLANT_9001  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE validate_plant_9001 INPUT.
+  IF sy-ucomm = 'SAVE' AND wa_gatep_tran-plant IS INITIAL.
+    MESSAGE 'Kindly Fill The Plant'  TYPE 'W' DISPLAY LIKE 'E'.
+  ENDIF.
+
+
+ENDMODULE.
+
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_9003  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE user_command_9003 INPUT.
+  CLEAR: gs_okcode.
+  gs_okcode = sy-ucomm.
+  CLEAR okcode.
+  CASE gs_okcode.
+    WHEN 'BACK' OR 'CANCEL'.
+      LEAVE TO SCREEN 0.
+    WHEN 'EXIT'.
+      LEAVE PROGRAM.
+    WHEN 'SAVE'.
+      PERFORM update_table_rgp.
+  ENDCASE.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  AT_EXIT_9003  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE at_exit_9003 INPUT.
+  IF wa_gatep_tran-transport_code IS NOT INITIAL.
+    SELECT SINGLE name1 FROM kna1 INTO wa_gatep_tran-transport_name WHERE kunnr = wa_gatep_tran-transport_code.
+    IF wa_gatep_tran-transport_name IS INITIAL.
+      SELECT SINGLE name1 FROM lfa1 INTO wa_gatep_tran-transport_name WHERE lifnr = wa_gatep_tran-transport_code.
+    ENDIF.
+  ENDIF.
+  IF  wa_gatep_tran-vendor_code IS NOT INITIAL.
+    SELECT SINGLE name1 FROM lfa1 INTO wa_gatep_tran-vendor_name WHERE lifnr = wa_gatep_tran-vendor_code.
+  ENDIF.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_9004  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE user_command_9004 INPUT.
+  CLEAR: gs_okcode.
+  gs_okcode = sy-ucomm.
+  CLEAR okcode.
+  CASE gs_okcode.
+    WHEN 'BACK' OR 'CANCEL'.
+      LEAVE TO SCREEN 0.
+    WHEN 'EXIT'.
+      LEAVE PROGRAM.
+    WHEN 'GO'.
+      PERFORM update_table_cancel.
+  ENDCASE.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  VALIDATE_GATE_PASS  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE validate_gate_pass INPUT.
+  IF wa_gatep_tran-gate_pass_no IS INITIAL.
+    MESSAGE 'Kindly Give the Gate Pass Number'  TYPE 'E'.
+  ELSEIF wa_gatep_tran-gate_pass_no IS NOT INITIAL.
+    SELECT SINGLE gate_pass_no FROM zin20_gatep_tran INTO wa_gate_no
+      WHERE gate_pass_no = wa_gatep_tran-gate_pass_no AND cancelled NE 'X'.
+    IF sy-subrc NE 0.
+      MESSAGE 'Given Gate Pass Number Has Been Cancelled / Not Found' TYPE 'E'.
+    ENDIF.
+  ENDIF.
+ENDMODULE.
+
+
+
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_9005  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE user_command_9005 INPUT.
+  CLEAR: gs_okcode.
+  gs_okcode = sy-ucomm.
+  CLEAR okcode.
+  CASE gs_okcode.
+    WHEN 'BACK' OR 'CANCEL'.
+      LEAVE TO SCREEN 0.
+    WHEN 'EXIT'.
+      LEAVE PROGRAM.
+    WHEN 'PRINT'.
+      PERFORM update_table_print.
+  ENDCASE.
+ENDMODULE.
+
+*&---------------------------------------------------------------------*
+*&      Module  VALIDATE_GYEAR  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE validate_gyear INPUT.
+
+IF  wa_gatep_tran-gyear IS INITIAL.
+    MESSAGE 'Kindly Give the Gate Pass Year'  TYPE 'E'.
+  ENDIF.
+
+* if wa_gatep_tran-gyear IS NOT INITIAL AND wa_gatep_tran-gate_pass_no IS NOT INITIAL.
+*   SELECT SINGLE gate_pass_no FROM zin20_gatep_tran INTO wa_gate_no
+*      WHERE gate_pass_no = wa_gatep_tran-gate_pass_no AND gyear = wa_gatep_tran-gyear AND cancelled NE 'X'.
+*    IF sy-subrc NE 0.
+*      MESSAGE 'Given Gate Pass Number/Year Has Been Cancelled / Not Found' TYPE 'E' DISPLAY LIKE 'I'.
+**      LEAVE TO SCREEN 0.
+*    ENDIF.
+*    endif.
+
+ENDMODULE.
+
+*&SPWIZARD: INPUT MODULE FOR TC 'TC_DISPLAY'. DO NOT CHANGE THIS LINE!
+*&SPWIZARD: MODIFY TABLE
+MODULE tc_display_modify INPUT.
+  MODIFY it_gatep_tran
+    FROM wa_gatep_tran1
+    INDEX tc_display-current_line.
+ENDMODULE.
+
+*&SPWIZARD: INPUT MODUL FOR TC 'TC_DISPLAY'. DO NOT CHANGE THIS LINE!
+*&SPWIZARD: MARK TABLE
+MODULE tc_display_mark INPUT.
+  DATA: g_tc_display_wa2 LIKE LINE OF it_gatep_tran.
+  IF tc_display-line_sel_mode = 1
+  AND wa_gatep_tran1-srno = 'X'.
+    LOOP AT it_gatep_tran INTO g_tc_display_wa2
+      WHERE srno = 'X'.
+      g_tc_display_wa2-srno = ''.
+      MODIFY it_gatep_tran FROM g_tc_display_wa2 TRANSPORTING srno.
+    ENDLOOP.
+  ENDIF.
+  MODIFY it_gatep_tran
+    FROM wa_gatep_tran1
+    INDEX tc_display-current_line
+    TRANSPORTING srno.
+ENDMODULE.
+
+*&SPWIZARD: INPUT MODULE FOR TC 'TC_DISPLAY'. DO NOT CHANGE THIS LINE!
+*&SPWIZARD: PROCESS USER COMMAND
+MODULE tc_display_user_command INPUT.
+  ok_code = sy-ucomm.
+  PERFORM user_ok_tc USING    'TC_DISPLAY'
+                              'IT_GATEP_TRAN'
+                              'SRNO'
+                     CHANGING ok_code.
+  sy-ucomm = ok_code.
+ENDMODULE. 
+
+
+4th Include:
+
+*&---------------------------------------------------------------------*
+*&  Include           ZIN20_GATEPASS_OUTWARD_F01
+*&---------------------------------------------------------------------*
+*&---------------------------------------------------------------------*
+*&      Form  UPDATE_TABLE
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM update_table.
+  DELETE it_gatep_tran WHERE challan_no IS INITIAL.
+
+*  IF it_gatep_tran IS NOT INITIAL.
+  IF wa_gatep_tran IS NOT INITIAL.
+    CALL FUNCTION 'NUMBER_GET_NEXT'
+      EXPORTING
+        nr_range_nr             = '01'
+        object                  = 'ZGOUT'
+        quantity                = '1'
+        toyear                  = lv_year
+      IMPORTING
+        number                  = lv_number
+      EXCEPTIONS
+        interval_not_found      = 1
+        number_range_not_intern = 2
+        object_not_found        = 3
+        quantity_is_0           = 4
+        quantity_is_not_1       = 5
+        interval_overflow       = 6
+        buffer_overflow         = 7
+        OTHERS                  = 8.
+    IF sy-subrc <> 0.
+* Implement suitable error handling here
+      MESSAGE ID sy-msgid TYPE 'I' NUMBER sy-msgno WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 DISPLAY LIKE 'E'.
+      LEAVE TO CURRENT TRANSACTION.
+    ENDIF.
+    IF r_out = 'X' AND lv_number IS NOT INITIAL.
+      CONCATENATE 'OUT' lv_number INTO lv_gatepass.
+      wa_gatep_tran-gate_pass_no = lv_gatepass.
+*    ENDIF.
+      wa_gatep_tran-entry_date = sy-datum.
+      wa_gatep_tran-entry_time = sy-uzeit.
+      wa_gatep_tran-entry_by = sy-uname.
+      wa_gatep_tran-gyear = sy-datum+0(4).
+
+      IF it_gatep_tran IS NOT INITIAL.
+
+        MOVE-CORRESPONDING wa_gatep_tran TO wa_gatep_tran1.
+        MODIFY it_gatep_tran FROM  wa_gatep_tran1
+            TRANSPORTING gate_pass_no
+                         gyear
+                         plant
+                         posting_date
+                         posting_time
+                         mode_of_tran
+                         lr_rr_no
+                         transport_code
+                         transport_name
+                         transporter_no
+                         driver_name
+                         driver_no
+                         vehicle_no
+                         inward_date
+                         inward_time
+                         reporting_loc
+                         loading_loc
+                         description
+                         vendor_code
+                         vendor_name
+                         outward_date
+                         outward_time
+                         no_series
+                         entry_date
+                         entry_time
+                         entry_by
+        WHERE challan_no IS NOT INITIAL.
+        CLEAR: lv_item.
+        LOOP AT it_gatep_tran INTO wa_gatep_tran1.
+          MOVE-CORRESPONDING wa_gatep_tran1 TO wa_gatep_tran.
+
+          lv_item = lv_item + 10.
+          wa_gatep_tran-gpass_itemno = lv_item.
+          wa_gatep_tran-item_no = lv_item.
+          MODIFY zin20_gatep_tran FROM wa_gatep_tran.
+          IF sy-subrc = 0.
+            COMMIT WORK AND WAIT.
+            lv_skip = 'X'.
+          ELSE.
+            ROLLBACK WORK.
+          ENDIF.
+          CLEAR :wa_gatep_tran1,wa_gatep_tran.
+        ENDLOOP.
+      ENDIF.
+
+      IF it_gatep_tran IS INITIAL AND wa_gatep_tran IS NOT INITIAL.
+        lv_item = lv_item + 10.
+        wa_gatep_tran-gpass_itemno = lv_item.
+        wa_gatep_tran-item_no = lv_item.
+        MODIFY zin20_gatep_tran FROM wa_gatep_tran.
+        IF sy-subrc = 0.
+          COMMIT WORK AND WAIT.
+          lv_skip = 'X'.
+        ELSE.
+          ROLLBACK WORK.
+        ENDIF.
+        CLEAR :wa_gatep_tran1,wa_gatep_tran.
+      ENDIF.
+
+
+      IF lv_skip = 'X'.
+        REFRESH : it_gatep_tran.
+        CONCATENATE 'Outward Gate Pass No' lv_gatepass 'Created Successfully' INTO DATA(lv_msg) SEPARATED BY ' '.
+        MESSAGE lv_msg TYPE 'I'.
+        LEAVE TO SCREEN 0.
+        CLEAR: lv_skip.
+      ENDIF.
+
+    ENDIF.
+  ENDIF.
+ENDFORM.
+
+*&---------------------------------------------------------------------*
+*&      Module  TRAN_F4HELP  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE tran_f4help INPUT.
+  REFRESH : lt_9002,lt_90021.
+  SELECT a~kunnr b~name1 FROM knb1 AS a INNER JOIN kna1 AS b ON a~kunnr = b~kunnr
+     INTO TABLE lt_9002 WHERE bukrs = 'IN20'.
+  SELECT a~lifnr b~name1 FROM lfb1 AS a INNER JOIN lfa1 AS b ON a~lifnr = b~lifnr
+    INTO TABLE lt_90021 WHERE bukrs = 'IN20'.
+  APPEND LINES OF lt_90021 TO lt_9002.
+  SORT lt_9002 BY transporter_code.
+  DELETE ADJACENT DUPLICATES FROM lt_9002 COMPARING transporter_code.
+
+
+  IF lt_9002 IS NOT INITIAL.
+*
+    CLEAR : return_tab,field_tab.
+*-- Attaching F4 Help
+    CALL FUNCTION 'F4IF_INT_TABLE_VALUE_REQUEST'
+      EXPORTING
+        retfield        = 'TRANSPORTER_CODE'
+        dynpprog        = sy-cprog
+        dynpnr          = '9001'
+*       dynprofield     = 'GWA_ZTIY_WB_H-TRUCK_NO'
+        value_org       = 'S'
+      TABLES
+        value_tab       = lt_9002
+        field_tab       = field_tab
+        return_tab      = return_tab
+      EXCEPTIONS
+        parameter_error = 1
+        no_values_found = 2
+        OTHERS          = 3.
+
+    IF sy-subrc EQ 0.
+      READ TABLE return_tab INTO DATA(ls_return_tab) INDEX 1.
+      IF sy-subrc = 0.
+        wa_gatep_tran-transport_code = ls_return_tab-fieldval.
+        CALL FUNCTION 'CONVERSION_EXIT_ALPHA_INPUT'
+          EXPORTING
+            input  = wa_gatep_tran-transport_code
+          IMPORTING
+            output = wa_gatep_tran-transport_code.
+      ENDIF.
+    ENDIF.
+  ENDIF.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module VENDOR_F4HELP  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE vendor_f4help INPUT.
+  REFRESH : lt_9002,return_tab,field_tab.
+  SELECT a~lifnr b~name1 FROM lfb1 AS a INNER JOIN lfa1 AS b ON a~lifnr = b~lifnr
+    INTO TABLE lt_9002 WHERE bukrs = 'IN20'.
+  SORT lt_9002 BY transporter_code.
+  DELETE ADJACENT DUPLICATES FROM lt_9002 COMPARING transporter_code.
+
+  IF lt_9002 IS NOT INITIAL.
+*-- Attaching F4 Help
+    CALL FUNCTION 'F4IF_INT_TABLE_VALUE_REQUEST'
+      EXPORTING
+        retfield        = 'TRANSPORTER_CODE'
+        dynpprog        = sy-cprog
+        dynpnr          = '9001'
+*       dynprofield     = 'GWA_ZTIY_WB_H-TRUCK_NO'
+        value_org       = 'S'
+      TABLES
+        value_tab       = lt_9002
+        field_tab       = field_tab
+        return_tab      = return_tab
+      EXCEPTIONS
+        parameter_error = 1
+        no_values_found = 2
+        OTHERS          = 3.
+
+    IF sy-subrc EQ 0.
+      READ TABLE return_tab INTO ls_return_tab INDEX 1.
+      IF sy-subrc = 0.
+        wa_gatep_tran-vendor_code = ls_return_tab-fieldval.
+        CALL FUNCTION 'CONVERSION_EXIT_ALPHA_INPUT'
+          EXPORTING
+            input  = wa_gatep_tran-vendor_code
+          IMPORTING
+            output = wa_gatep_tran-vendor_code.
+      ENDIF.
+    ENDIF.
+  ENDIF.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Module  PLANT_F4HELP  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE plant_f4help INPUT.
+
+  REFRESH : field_tab,return_tab.
+  SELECT werks FROM t001w INTO TABLE @DATA(it_plant).
+  SORT  it_plant BY werks.
+  DELETE ADJACENT DUPLICATES FROM it_plant COMPARING werks.
+
+
+  IF it_plant IS NOT INITIAL.
+*-- Attaching F4 Help
+    CALL FUNCTION 'F4IF_INT_TABLE_VALUE_REQUEST'
+      EXPORTING
+        retfield        = 'PLANT'
+        dynpprog        = sy-cprog
+        dynpnr          = '9001'
+        value_org       = 'S'
+      TABLES
+        value_tab       = it_plant
+        field_tab       = field_tab
+        return_tab      = return_tab
+      EXCEPTIONS
+        parameter_error = 1
+        no_values_found = 2
+        OTHERS          = 3.
+
+    IF sy-subrc EQ 0.
+      READ TABLE return_tab INTO ls_return_tab INDEX 1.
+      IF sy-subrc = 0.
+        wa_gatep_tran-plant = ls_return_tab-fieldval.
+      ENDIF.
+    ENDIF.
+  ENDIF.
+  CLEAR: it_plant.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Form  UPDATE_TABLE_INWARD
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM update_table_inward.
+  DELETE it_gatep_tran WHERE challan_no IS INITIAL.
+
+*  IF it_gatep_tran IS NOT INITIAL.
+  IF wa_gatep_tran IS NOT INITIAL.
+    CLEAR: lv_number1,lv_gatepass.
+    CALL FUNCTION 'NUMBER_GET_NEXT'
+      EXPORTING
+        nr_range_nr             = '01'
+        object                  = 'ZGATEIN'
+        quantity                = '1'
+        toyear                  = lv_year
+      IMPORTING
+        number                  = lv_number1
+      EXCEPTIONS
+        interval_not_found      = 1
+        number_range_not_intern = 2
+        object_not_found        = 3
+        quantity_is_0           = 4
+        quantity_is_not_1       = 5
+        interval_overflow       = 6
+        buffer_overflow         = 7
+        OTHERS                  = 8.
+    IF sy-subrc <> 0.
+* Implement suitable error handling here
+      MESSAGE ID sy-msgid TYPE 'I' NUMBER sy-msgno WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 DISPLAY LIKE 'E'.
+      LEAVE TO CURRENT TRANSACTION.
+    ENDIF.
+    IF r_in = 'X' AND lv_number1 IS NOT INITIAL.
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_INPUT'
+        EXPORTING
+          input  = lv_number1
+        IMPORTING
+          output = lv_number1.
+
+      CONCATENATE 'IN' lv_number1 INTO lv_gatepass.
+      wa_gatep_tran-gate_pass_no = lv_gatepass.
+      wa_gatep_tran-entry_date = sy-datum.
+      wa_gatep_tran-entry_time = sy-uzeit.
+      wa_gatep_tran-entry_by = sy-uname.
+      wa_gatep_tran-gyear = sy-datum+0(4).
+
+      IF it_gatep_tran IS NOT INITIAL.
+
+        MOVE-CORRESPONDING wa_gatep_tran TO wa_gatep_tran1.
+        MODIFY it_gatep_tran FROM  wa_gatep_tran1
+            TRANSPORTING gate_pass_no
+                         gyear
+                         plant
+                         posting_date
+                         posting_time
+                         mode_of_tran
+                         lr_rr_no
+                         transport_code
+                         transport_name
+                         transporter_no
+                         driver_name
+                         driver_no
+                         vehicle_no
+                         inward_date
+                         inward_time
+                         reporting_loc
+                         loading_loc
+                         description
+                         vendor_code
+                         vendor_name
+                         outward_date
+                         outward_time
+                         no_series
+                         entry_date
+                         entry_time
+                         entry_by
+        WHERE challan_no IS NOT INITIAL.
+        CLEAR: lv_item.
+        LOOP AT it_gatep_tran INTO wa_gatep_tran1.
+          MOVE-CORRESPONDING wa_gatep_tran1 TO wa_gatep_tran.
+
+          lv_item = lv_item + 10.
+          wa_gatep_tran-gpass_itemno = lv_item.
+          wa_gatep_tran-item_no = lv_item.
+          MODIFY zin20_gatep_tran FROM wa_gatep_tran.
+          IF sy-subrc = 0.
+            COMMIT WORK AND WAIT.
+            lv_skip = 'X'.
+          ELSE.
+            ROLLBACK WORK.
+          ENDIF.
+          CLEAR :wa_gatep_tran1,wa_gatep_tran.
+        ENDLOOP.
+      ENDIF.
+
+      IF it_gatep_tran IS INITIAL AND wa_gatep_tran IS NOT INITIAL.
+        lv_item = lv_item + 10.
+        wa_gatep_tran-gpass_itemno = lv_item.
+        wa_gatep_tran-item_no = lv_item.
+        MODIFY zin20_gatep_tran FROM wa_gatep_tran.
+        IF sy-subrc = 0.
+          COMMIT WORK AND WAIT.
+          lv_skip = 'X'.
+        ELSE.
+          ROLLBACK WORK.
+        ENDIF.
+        CLEAR :wa_gatep_tran1,wa_gatep_tran.
+      ENDIF.
+
+      IF lv_skip = 'X'.
+        REFRESH : it_gatep_tran.
+        CONCATENATE 'Inward Gate Pass No' lv_gatepass 'Created Successfully'
+               INTO DATA(lv_msg) SEPARATED BY ' '.
+        MESSAGE lv_msg TYPE 'I'.
+        LEAVE TO SCREEN 0.
+        CLEAR: lv_skip.
+      ENDIF.
+
+    ENDIF.
+  ENDIF.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  UPDATE_TABLE_RGP
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM update_table_rgp.
+  DELETE it_gatep_tran WHERE challan_no IS INITIAL.
+
+*  IF it_gatep_tran IS NOT INITIAL.
+  IF wa_gatep_tran IS NOT INITIAL.
+    CLEAR: lv_number,lv_gatepass.
+    CALL FUNCTION 'NUMBER_GET_NEXT'
+      EXPORTING
+        nr_range_nr             = '01'
+        object                  = 'ZRGP'
+        quantity                = '1'
+        toyear                  = lv_year
+      IMPORTING
+        number                  = lv_number
+      EXCEPTIONS
+        interval_not_found      = 1
+        number_range_not_intern = 2
+        object_not_found        = 3
+        quantity_is_0           = 4
+        quantity_is_not_1       = 5
+        interval_overflow       = 6
+        buffer_overflow         = 7
+        OTHERS                  = 8.
+    IF sy-subrc <> 0.
+* Implement suitable error handling here
+      MESSAGE ID sy-msgid TYPE 'I' NUMBER sy-msgno WITH sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 DISPLAY LIKE 'E'.
+      LEAVE TO CURRENT TRANSACTION.
+    ENDIF.
+
+    IF r_rgp = 'X' AND lv_number IS NOT INITIAL.
+      CALL FUNCTION 'CONVERSION_EXIT_ALPHA_INPUT'
+        EXPORTING
+          input  = lv_number
+        IMPORTING
+          output = lv_number.
+
+      CONCATENATE 'RGP' lv_number INTO lv_gatepass.
+      wa_gatep_tran-gate_pass_no = lv_gatepass.
+      wa_gatep_tran-entry_date = sy-datum.
+      wa_gatep_tran-entry_time = sy-uzeit.
+      wa_gatep_tran-entry_by = sy-uname.
+      wa_gatep_tran-gyear = sy-datum+0(4).
+
+      IF it_gatep_tran IS NOT INITIAL.
+        MOVE-CORRESPONDING wa_gatep_tran TO wa_gatep_tran1.
+        MODIFY it_gatep_tran FROM  wa_gatep_tran1
+            TRANSPORTING gate_pass_no
+                         gyear
+                         plant
+                         posting_date
+                         posting_time
+                         mode_of_tran
+                         lr_rr_no
+                         transport_code
+                         transport_name
+                         transporter_no
+                         driver_name
+                         driver_no
+                         vehicle_no
+                         inward_date
+                         inward_time
+                         reporting_loc
+                         loading_loc
+                         description
+                         vendor_code
+                         vendor_name
+                         outward_date
+                         outward_time
+                         no_series
+                         entry_date
+                         entry_time
+                         entry_by
+        WHERE challan_no IS NOT INITIAL.
+        CLEAR: lv_item.
+        LOOP AT it_gatep_tran INTO wa_gatep_tran1.
+          MOVE-CORRESPONDING wa_gatep_tran1 TO wa_gatep_tran.
+
+          lv_item = lv_item + 10.
+          wa_gatep_tran-gpass_itemno = lv_item.
+          wa_gatep_tran-item_no = lv_item.
+          MODIFY zin20_gatep_tran FROM wa_gatep_tran.
+          IF sy-subrc = 0.
+            COMMIT WORK AND WAIT.
+            lv_skip = 'X'.
+          ELSE.
+            ROLLBACK WORK.
+          ENDIF.
+          CLEAR :wa_gatep_tran1,wa_gatep_tran.
+        ENDLOOP.
+      ENDIF.
+
+      IF it_gatep_tran IS INITIAL AND wa_gatep_tran IS NOT INITIAL.
+        lv_item = lv_item + 10.
+        wa_gatep_tran-gpass_itemno = lv_item.
+        wa_gatep_tran-item_no = lv_item.
+        MODIFY zin20_gatep_tran FROM wa_gatep_tran.
+        IF sy-subrc = 0.
+          COMMIT WORK AND WAIT.
+          lv_skip = 'X'.
+        ELSE.
+          ROLLBACK WORK.
+        ENDIF.
+        CLEAR :wa_gatep_tran1,wa_gatep_tran.
+      ENDIF.
+
+      IF lv_skip = 'X'.
+        REFRESH : it_gatep_tran.
+        CLEAR: lv_msg.
+        CONCATENATE 'RGP Gate Pass No' lv_gatepass 'Created Successfully'
+               INTO lv_msg SEPARATED BY ' '.
+        MESSAGE lv_msg TYPE 'I'.
+        LEAVE TO SCREEN 0.
+        CLEAR: lv_skip.
+      ENDIF.
+    ENDIF.
+  ENDIF.
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Form  UPDATE_TABLE_CANCEL
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM update_table_cancel.
+
+  IF wa_gatep_tran-gate_pass_no IS NOT INITIAL AND wa_gatep_tran-gyear IS NOT INITIAL.
+    SELECT SINGLE gate_pass_no FROM zin20_gatep_tran INTO wa_gate_no
+      WHERE gate_pass_no = wa_gatep_tran-gate_pass_no AND gyear = wa_gatep_tran-gyear AND cancelled NE 'X'.
+    IF sy-subrc NE 0.
+      MESSAGE 'Given Gate Pass Number/Year Has Been Cancelled / Not Found' TYPE 'I'.
+      LEAVE TO SCREEN 0.
+    ENDIF.
+  ENDIF.
+
+
+  CALL FUNCTION 'POPUP_TO_CONFIRM'
+    EXPORTING
+*     TITLEBAR       = ' '
+      text_question  = 'Confrim to Cancel the Gate Pass Number'
+    IMPORTING
+      answer         = lv_ans
+    EXCEPTIONS
+      text_not_found = 1
+      OTHERS         = 2.
+  IF sy-subrc <> 0.
+* Implement suitable error handling here
+  ENDIF.
+
+  IF lv_ans = '1' AND wa_gatep_tran IS NOT INITIAL.
+    IF wa_gatep_tran IS NOT INITIAL.
+      UPDATE zin20_gatep_tran SET cancelled  = 'X'
+             WHERE  gate_pass_no = wa_gatep_tran-gate_pass_no
+               AND  gyear = wa_gatep_tran-gyear.
+      IF sy-subrc = 0.
+        COMMIT WORK AND WAIT.
+        CLEAR: lv_msg.
+        CONCATENATE  'Gate Pass Number' lv_gatepass 'Cancelled Successfully'
+               INTO lv_msg SEPARATED BY ' '.
+        MESSAGE lv_msg TYPE 'I'.
+        LEAVE TO SCREEN 0.
+      ELSE.
+        ROLLBACK WORK.
+      ENDIF.
+    ENDIF.
+  ENDIF.
+
+
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Module  GATEPASS_F4HELP  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE gatepass_f4help INPUT.
+  REFRESH : field_tab,return_tab.
+  SELECT gate_pass_no, gyear FROM zin20_gatep_tran INTO TABLE @DATA(it_gatepass).
+  SORT it_gatepass BY gate_pass_no ASCENDING.
+  DELETE ADJACENT DUPLICATES FROM it_gatepass COMPARING gate_pass_no.
+
+
+  IF it_gatepass IS NOT INITIAL.
+*-- Attaching F4 Help
+    CALL FUNCTION 'F4IF_INT_TABLE_VALUE_REQUEST'
+      EXPORTING
+        retfield        = 'GATE_PASS_NO'
+        dynpprog        = sy-cprog
+        dynpnr          = '9004'
+        value_org       = 'S'
+      TABLES
+        value_tab       = it_gatepass
+        field_tab       = field_tab
+        return_tab      = return_tab
+      EXCEPTIONS
+        parameter_error = 1
+        no_values_found = 2
+        OTHERS          = 3.
+
+    IF sy-subrc EQ 0.
+      READ TABLE return_tab INTO ls_return_tab INDEX 1.
+      IF sy-subrc = 0.
+        wa_gatep_tran-gate_pass_no = ls_return_tab-fieldval.
+      ENDIF.
+    ENDIF.
+  ENDIF.
+  CLEAR: it_gatepass.
+ENDMODULE.
+*&---------------------------------------------------------------------*
+*&      Form  UPDATE_TABLE_PRINT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM update_table_print .
+  DATA : lv_errflg TYPE c.
+  CLEAR : lv_errflg.
+  CLEAR : lv_form,wa_control,ls_output,i_otfdata1,
+          i_lines,i_otfdata,lv_bin_filesize.
+  IF wa_gatep_tran-gate_pass_no IS NOT INITIAL AND wa_gatep_tran-gyear IS NOT INITIAL.
+    SELECT SINGLE gate_pass_no FROM zin20_gatep_tran INTO wa_gate_no
+      WHERE gate_pass_no = wa_gatep_tran-gate_pass_no AND gyear = wa_gatep_tran-gyear AND cancelled NE 'X'.
+    IF sy-subrc NE 0.
+      MESSAGE 'Given Gate Pass Number/Year Has Been Cancelled / Not Found' TYPE 'I' DISPLAY LIKE 'E'.
+*      LEAVE TO SCREEN 0.
+      lv_errflg = 'X'.
+    ENDIF.
+  ENDIF.
+
+  IF lv_errflg NE 'X'.
+    SELECT SINGLE * FROM zin20_gatep_tran INTO wa_gatep_tran
+*  SELECT * FROM zin20_gatep_tran INTO TABLE it_gatep_tran1
+      WHERE gate_pass_no = wa_gatep_tran-gate_pass_no
+      AND gyear = wa_gatep_tran-gyear AND cancelled NE 'X'.
+*    MOVE-CORRESPONDING it_gatep_tran TO it_gatep_tran1.
+    IF wa_gatep_tran IS NOT INITIAL.
+      IF wa_gatep_tran-gate_pass_no CS 'IN'.
+        lv_form = 'ZINWARD_GATE_ENTRY'.
+      ELSEIF wa_gatep_tran-gate_pass_no CS 'OUT'.
+        lv_form = 'ZOUTWARD_GATE_PASS'.
+      ELSEIF wa_gatep_tran-gate_pass_no CS 'RGP'.
+        lv_form = 'ZRGP_GATE_ENTRY'.
+      ENDIF.
+
+      IF lv_form IS NOT INITIAL.
+        CALL FUNCTION 'SSF_FUNCTION_MODULE_NAME'
+          EXPORTING
+            formname           = lv_form "'ZINWARD_GATE_ENTRY'
+*           VARIANT            = ' '
+*           DIRECT_CALL        = ' '
+          IMPORTING
+            fm_name            = lv_fname
+          EXCEPTIONS
+            no_form            = 1
+            no_function_module = 2
+            OTHERS             = 3.
+        IF sy-subrc <> 0.
+* Implement suitable error handling here
+        ENDIF.
+
+        CALL FUNCTION 'SSF_GET_DEVICE_TYPE'
+          EXPORTING
+            i_language             = sy-langu
+          IMPORTING
+            e_devtype              = gv_devtype
+          EXCEPTIONS
+            no_language            = 1
+            language_not_installed = 2
+            no_devtype_found       = 3
+            system_error           = 4
+            OTHERS                 = 5.
+        IF sy-subrc <> 0.
+* Implement suitable error handling here
+        ENDIF.
+
+        wa_ssfcompop-tdprinter = 'LP01'."gv_devtype.
+        wa_control-getotf = 'X'.
+
+        wa_control-preview  = 'X'.
+        wa_control-no_dialog = 'X'.
+
+        CALL FUNCTION lv_fname "'/1BCDWB/SF00000287'
+          EXPORTING
+*           ARCHIVE_INDEX      =
+*           ARCHIVE_INDEX_TAB  =
+*           ARCHIVE_PARAMETERS =
+            control_parameters = wa_control
+*           MAIL_APPL_OBJ      =
+*           MAIL_RECIPIENT     =
+*           MAIL_SENDER        =
+*           OUTPUT_OPTIONS     =
+*           USER_SETTINGS      = 'X'
+            wa_gate_pass       = wa_gatep_tran
+*           it_gate_pass       = it_gatep_tran1
+          IMPORTING
+*           DOCUMENT_OUTPUT_INFO       =
+            job_output_info    = ls_output
+*           JOB_OUTPUT_OPTIONS =
+          EXCEPTIONS
+            formatting_error   = 1
+            internal_error     = 2
+            send_error         = 3
+            user_canceled      = 4
+            OTHERS             = 5.
+        IF sy-subrc <> 0.
+* Implement suitable error handling here
+        ENDIF.
+
+        i_otfdata[] = ls_output-otfdata[].
+        APPEND LINES OF i_otfdata[] TO i_otfdata1[].
+        REFRESH : i_otfdata[] .
+
+        CALL FUNCTION 'CONVERT_OTF'
+          EXPORTING
+            format                = 'PDF'
+            max_linewidth         = 1024                                             "1024
+          IMPORTING
+            bin_filesize          = lv_bin_filesize
+            bin_file              = l_xstring
+          TABLES
+            otf                   = i_otfdata1
+            lines                 = i_lines
+          EXCEPTIONS
+            err_max_linewidth     = 1
+            err_format            = 2
+            err_conv_not_possible = 3
+            err_bad_otf           = 4
+            OTHERS                = 5 ##FM_SUBRC_OK.
+
+        CALL FUNCTION 'SSFCOMP_PDF_PREVIEW'
+          EXPORTING
+            i_otf                    = i_otfdata1
+          EXCEPTIONS
+            convert_otf_to_pdf_error = 1
+            cntl_error               = 2
+            OTHERS                   = 3.
+      ENDIF.
+    ELSE.
+      MESSAGE 'Kindly Give Correct Gate Pass Number'  TYPE 'E'.
+    ENDIF.
+  ENDIF.
+ENDFORM.
+*&---------------------------------------------------------------------*
+*&      Module  LOADING_F4HELP  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE loading_f4help INPUT.
+
+  REFRESH : field_tab,return_tab.
+  SELECT werks arbpl  FROM crhd INTO TABLE it_load_loc WHERE werks = '2700'.
+  SORT it_load_loc BY arbpl ASCENDING.
+  DELETE ADJACENT DUPLICATES FROM it_load_loc COMPARING arbpl.
+
+  IF it_load_loc IS NOT INITIAL.
+*-- Attaching F4 Help
+    CALL FUNCTION 'F4IF_INT_TABLE_VALUE_REQUEST'
+      EXPORTING
+        retfield        = 'LOADING_LOC'
+        dynpprog        = sy-cprog
+        dynpnr          = '9001'
+        value_org       = 'S'
+      TABLES
+        value_tab       = it_load_loc
+        field_tab       = field_tab
+        return_tab      = return_tab
+      EXCEPTIONS
+        parameter_error = 1
+        no_values_found = 2
+        OTHERS          = 3.
+
+    IF sy-subrc EQ 0.
+      READ TABLE return_tab INTO ls_return_tab INDEX 1.
+      IF sy-subrc = 0.
+        wa_gatep_tran-loading_loc = ls_return_tab-fieldval.
+      ENDIF.
+    ENDIF.
+  ENDIF.
+  CLEAR: it_load_loc,ls_return_tab.
+
+
+
+ENDMODULE.
+
+*----------------------------------------------------------------------*
+*   INCLUDE TABLECONTROL_FORMS                                         *
+*----------------------------------------------------------------------*
+
+*&---------------------------------------------------------------------*
+*&      Form  USER_OK_TC                                               *
+*&---------------------------------------------------------------------*
+FORM user_ok_tc USING    p_tc_name TYPE dynfnam
+                         p_table_name
+                         p_mark_name
+                CHANGING p_ok      LIKE sy-ucomm.
+
+*&SPWIZARD: BEGIN OF LOCAL DATA----------------------------------------*
+  DATA: l_ok     TYPE sy-ucomm,
+        l_offset TYPE i.
+*&SPWIZARD: END OF LOCAL DATA------------------------------------------*
+
+*&SPWIZARD: Table control specific operations                          *
+*&SPWIZARD: evaluate TC name and operations                            *
+  SEARCH p_ok FOR p_tc_name.
+  IF sy-subrc <> 0.
+    EXIT.
+  ENDIF.
+  l_offset = strlen( p_tc_name ) + 1.
+  l_ok = p_ok+l_offset.
+*&SPWIZARD: execute general and TC specific operations                 *
+  CASE l_ok.
+    WHEN 'INSR'.                      "insert row
+      PERFORM fcode_insert_row USING    p_tc_name
+                                        p_table_name.
+      CLEAR p_ok.
+
+    WHEN 'DELE'.                      "delete row
+      PERFORM fcode_delete_row USING    p_tc_name
+                                        p_table_name
+                                        p_mark_name.
+      CLEAR p_ok.
+
+    WHEN 'P--' OR                     "top of list
+         'P-'  OR                     "previous page
+         'P+'  OR                     "next page
+         'P++'.                       "bottom of list
+      PERFORM compute_scrolling_in_tc USING p_tc_name
+                                            l_ok.
+      CLEAR p_ok.
+*     WHEN 'L--'.                       "total left
+*       PERFORM FCODE_TOTAL_LEFT USING P_TC_NAME.
+*
+*     WHEN 'L-'.                        "column left
+*       PERFORM FCODE_COLUMN_LEFT USING P_TC_NAME.
+*
+*     WHEN 'R+'.                        "column right
+*       PERFORM FCODE_COLUMN_RIGHT USING P_TC_NAME.
+*
+*     WHEN 'R++'.                       "total right
+*       PERFORM FCODE_TOTAL_RIGHT USING P_TC_NAME.
+*
+    WHEN 'MARK'.                      "mark all filled lines
+      PERFORM fcode_tc_mark_lines USING p_tc_name
+                                        p_table_name
+                                        p_mark_name   .
+      CLEAR p_ok.
+
+    WHEN 'DMRK'.                      "demark all filled lines
+      PERFORM fcode_tc_demark_lines USING p_tc_name
+                                          p_table_name
+                                          p_mark_name .
+      CLEAR p_ok.
+
+*     WHEN 'SASCEND'   OR
+*          'SDESCEND'.                  "sort column
+*       PERFORM FCODE_SORT_TC USING P_TC_NAME
+*                                   l_ok.
+
+  ENDCASE.
+
+ENDFORM.                              " USER_OK_TC
+
+*&---------------------------------------------------------------------*
+*&      Form  FCODE_INSERT_ROW                                         *
+*&---------------------------------------------------------------------*
+FORM fcode_insert_row
+              USING    p_tc_name           TYPE dynfnam
+                       p_table_name             .
+
+*&SPWIZARD: BEGIN OF LOCAL DATA----------------------------------------*
+  DATA l_lines_name       LIKE feld-name.
+  DATA l_selline          LIKE sy-stepl.
+  DATA l_lastline         TYPE i.
+  DATA l_line             TYPE i.
+  DATA l_table_name       LIKE feld-name.
+  FIELD-SYMBOLS <tc>                 TYPE cxtab_control.
+  FIELD-SYMBOLS <table>              TYPE STANDARD TABLE.
+  FIELD-SYMBOLS <lines>              TYPE i.
+*&SPWIZARD: END OF LOCAL DATA------------------------------------------*
+
+  ASSIGN (p_tc_name) TO <tc>.
+
+*&SPWIZARD: get the table, which belongs to the tc                     *
+  CONCATENATE p_table_name '[]' INTO l_table_name. "table body
+  ASSIGN (l_table_name) TO <table>.                "not headerline
+
+*&SPWIZARD: get looplines of TableControl                              *
+  CONCATENATE 'G_' p_tc_name '_LINES' INTO l_lines_name.
+  ASSIGN (l_lines_name) TO <lines>.
+
+*&SPWIZARD: get current line                                           *
+  GET CURSOR LINE l_selline.
+  IF sy-subrc <> 0.                   " append line to table
+    l_selline = <tc>-lines + 1.
+*&SPWIZARD: set top line                                               *
+    IF l_selline > <lines>.
+      <tc>-top_line = l_selline - <lines> + 1 .
+    ELSE.
+      <tc>-top_line = 1.
+    ENDIF.
+  ELSE.                               " insert line into table
+    l_selline = <tc>-top_line + l_selline - 1.
+    l_lastline = <tc>-top_line + <lines> - 1.
+  ENDIF.
+*&SPWIZARD: set new cursor line                                        *
+  l_line = l_selline - <tc>-top_line + 1.
+
+*&SPWIZARD: insert initial line                                        *
+  INSERT INITIAL LINE INTO <table> INDEX l_selline.
+  <tc>-lines = <tc>-lines + 1.
+*&SPWIZARD: set cursor                                                 *
+  SET CURSOR 1 l_line.
+
+ENDFORM.                              " FCODE_INSERT_ROW
+
+*&---------------------------------------------------------------------*
+*&      Form  FCODE_DELETE_ROW                                         *
+*&---------------------------------------------------------------------*
+FORM fcode_delete_row
+              USING    p_tc_name           TYPE dynfnam
+                       p_table_name
+                       p_mark_name   .
+
+*&SPWIZARD: BEGIN OF LOCAL DATA----------------------------------------*
+  DATA l_table_name       LIKE feld-name.
+
+  FIELD-SYMBOLS <tc>         TYPE cxtab_control.
+  FIELD-SYMBOLS <table>      TYPE STANDARD TABLE.
+  FIELD-SYMBOLS <wa>.
+  FIELD-SYMBOLS <mark_field>.
+*&SPWIZARD: END OF LOCAL DATA------------------------------------------*
+
+  ASSIGN (p_tc_name) TO <tc>.
+
+*&SPWIZARD: get the table, which belongs to the tc                     *
+  CONCATENATE p_table_name '[]' INTO l_table_name. "table body
+  ASSIGN (l_table_name) TO <table>.                "not headerline
+
+*&SPWIZARD: delete marked lines                                        *
+  DESCRIBE TABLE <table> LINES <tc>-lines.
+
+  LOOP AT <table> ASSIGNING <wa>.
+
+*&SPWIZARD: access to the component 'FLAG' of the table header         *
+    ASSIGN COMPONENT p_mark_name OF STRUCTURE <wa> TO <mark_field>.
+
+    IF <mark_field> = 'X'.
+      DELETE <table> INDEX syst-tabix.
+      IF sy-subrc = 0.
+        <tc>-lines = <tc>-lines - 1.
+      ENDIF.
+    ENDIF.
+  ENDLOOP.
+
+ENDFORM.                              " FCODE_DELETE_ROW
+
+*&---------------------------------------------------------------------*
+*&      Form  COMPUTE_SCROLLING_IN_TC
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->P_TC_NAME  name of tablecontrol
+*      -->P_OK       ok code
+*----------------------------------------------------------------------*
+FORM compute_scrolling_in_tc USING    p_tc_name
+                                      p_ok.
+*&SPWIZARD: BEGIN OF LOCAL DATA----------------------------------------*
+  DATA l_tc_new_top_line     TYPE i.
+  DATA l_tc_name             LIKE feld-name.
+  DATA l_tc_lines_name       LIKE feld-name.
+  DATA l_tc_field_name       LIKE feld-name.
+
+  FIELD-SYMBOLS <tc>         TYPE cxtab_control.
+  FIELD-SYMBOLS <lines>      TYPE i.
+*&SPWIZARD: END OF LOCAL DATA------------------------------------------*
+
+  ASSIGN (p_tc_name) TO <tc>.
+*&SPWIZARD: get looplines of TableControl                              *
+  CONCATENATE 'G_' p_tc_name '_LINES' INTO l_tc_lines_name.
+  ASSIGN (l_tc_lines_name) TO <lines>.
+
+
+*&SPWIZARD: is no line filled?                                         *
+  IF <tc>-lines = 0.
+*&SPWIZARD: yes, ...                                                   *
+    l_tc_new_top_line = 1.
+  ELSE.
+*&SPWIZARD: no, ...                                                    *
+    CALL FUNCTION 'SCROLLING_IN_TABLE'
+      EXPORTING
+        entry_act      = <tc>-top_line
+        entry_from     = 1
+        entry_to       = <tc>-lines
+        last_page_full = 'X'
+        loops          = <lines>
+        ok_code        = p_ok
+        overlapping    = 'X'
+      IMPORTING
+        entry_new      = l_tc_new_top_line
+      EXCEPTIONS
+*       NO_ENTRY_OR_PAGE_ACT  = 01
+*       NO_ENTRY_TO    = 02
+*       NO_OK_CODE_OR_PAGE_GO = 03
+        OTHERS         = 0.
+  ENDIF.
+
+*&SPWIZARD: get actual tc and column                                   *
+  GET CURSOR FIELD l_tc_field_name
+             AREA  l_tc_name.
+
+  IF syst-subrc = 0.
+    IF l_tc_name = p_tc_name.
+*&SPWIZARD: et actual column                                           *
+      SET CURSOR FIELD l_tc_field_name LINE 1.
+    ENDIF.
+  ENDIF.
+
+*&SPWIZARD: set the new top line                                       *
+  <tc>-top_line = l_tc_new_top_line.
+
+
+ENDFORM.                              " COMPUTE_SCROLLING_IN_TC
+
+*&---------------------------------------------------------------------*
+*&      Form  FCODE_TC_MARK_LINES
+*&---------------------------------------------------------------------*
+*       marks all TableControl lines
+*----------------------------------------------------------------------*
+*      -->P_TC_NAME  name of tablecontrol
+*----------------------------------------------------------------------*
+FORM fcode_tc_mark_lines USING p_tc_name
+                               p_table_name
+                               p_mark_name.
+*&SPWIZARD: EGIN OF LOCAL DATA-----------------------------------------*
+  DATA l_table_name       LIKE feld-name.
+
+  FIELD-SYMBOLS <tc>         TYPE cxtab_control.
+  FIELD-SYMBOLS <table>      TYPE STANDARD TABLE.
+  FIELD-SYMBOLS <wa>.
+  FIELD-SYMBOLS <mark_field>.
+*&SPWIZARD: END OF LOCAL DATA------------------------------------------*
+
+  ASSIGN (p_tc_name) TO <tc>.
+
+*&SPWIZARD: get the table, which belongs to the tc                     *
+  CONCATENATE p_table_name '[]' INTO l_table_name. "table body
+  ASSIGN (l_table_name) TO <table>.                "not headerline
+
+*&SPWIZARD: mark all filled lines                                      *
+  LOOP AT <table> ASSIGNING <wa>.
+
+*&SPWIZARD: access to the component 'FLAG' of the table header         *
+    ASSIGN COMPONENT p_mark_name OF STRUCTURE <wa> TO <mark_field>.
+
+    <mark_field> = 'X'.
+  ENDLOOP.
+ENDFORM.                                          "fcode_tc_mark_lines
+
+*&---------------------------------------------------------------------*
+*&      Form  FCODE_TC_DEMARK_LINES
+*&---------------------------------------------------------------------*
+*       demarks all TableControl lines
+*----------------------------------------------------------------------*
+*      -->P_TC_NAME  name of tablecontrol
+*----------------------------------------------------------------------*
+FORM fcode_tc_demark_lines USING p_tc_name
+                                 p_table_name
+                                 p_mark_name .
+*&SPWIZARD: BEGIN OF LOCAL DATA----------------------------------------*
+  DATA l_table_name       LIKE feld-name.
+
+  FIELD-SYMBOLS <tc>         TYPE cxtab_control.
+  FIELD-SYMBOLS <table>      TYPE STANDARD TABLE.
+  FIELD-SYMBOLS <wa>.
+  FIELD-SYMBOLS <mark_field>.
+*&SPWIZARD: END OF LOCAL DATA------------------------------------------*
+
+  ASSIGN (p_tc_name) TO <tc>.
+
+*&SPWIZARD: get the table, which belongs to the tc                     *
+  CONCATENATE p_table_name '[]' INTO l_table_name. "table body
+  ASSIGN (l_table_name) TO <table>.                "not headerline
+
+*&SPWIZARD: demark all filled lines                                    *
+  LOOP AT <table> ASSIGNING <wa>.
+
+*&SPWIZARD: access to the component 'FLAG' of the table header         *
+    ASSIGN COMPONENT p_mark_name OF STRUCTURE <wa> TO <mark_field>.
+
+    <mark_field> = space.
+  ENDLOOP.
+ENDFORM.                                          "fcode_tc_mark_lines
+  

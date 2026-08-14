@@ -1,0 +1,55 @@
+PROGRAM ZSDR_MDP_EX1_RANGES.
+
+   DATA : A TYPE T001-BUKRS,
+         B TYPE T001-BUKRS.
+
+TABLES : T001.
+
+RANGES R_BUKRS FOR T001-BUKRS.
+
+DATA : BEGIN OF WA_T001,
+        BUKRS TYPE T001-BUKRS,
+        BUTXT TYPE T001-BUTXT,
+        ORT01 TYPE T001-ORT01,
+        LAND1 TYPE T001-LAND1,
+      END OF WA_T001.
+ DATA : IT_T001 LIKE TABLE OF WA_T001.
+
+
+*&---------------------------------------------------------------------*
+*&      Module  USER_COMMAND_0  INPUT
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+MODULE USER_COMMAND_1000 INPUT.
+  IF SY-UCOMM = 'DIS'.
+     R_BUKRS-LOW = A.
+    R_BUKRS-HIGH = B.
+    R_BUKRS-SIGN = 'I'.
+
+  IF B IS INITIAL .
+     R_BUKRS-OPTION = 'EQ'.
+  ELSE .
+     R_BUKRS-OPTION = 'BT'.
+ ENDIF.
+ APPEND R_BUKRS.
+
+ SELECT BUKRS BUTXT ORT01 LAND1
+  FROM T001 INTO TABLE IT_T001
+  WHERE BUKRS  IN R_BUKRS .
+   LEAVE TO LIST-PROCESSING.
+   SORT IT_T001 BY BUKRS.
+   LOOP AT IT_T001 INTO WA_T001.
+     WRITE : / WA_T001-BUKRS,
+      WA_T001-BUTXT,
+      WA_T001-ORT01,
+      WA_T001-LAND1.
+     ENDLOOP.
+
+      ELSEIF SY-UCOMM = 'BACK'.
+ LEAVE PROGRAM.
+
+  ENDIF.
+
+
+ENDMODULE.
